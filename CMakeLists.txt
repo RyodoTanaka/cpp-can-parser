@@ -1,6 +1,25 @@
 cmake_minimum_required(VERSION 3.7.0)
+project(cpp_can_parser)
 
-project(CPP-CAN-Parser)
+# ROS #
+add_compile_options(-std=c++17 -O0)
+set(ROS_DEPENDS
+  roscpp
+  )
+find_package(catkin REQUIRED COMPONENTS
+  ${ROS_DEPENDS}
+)
+
+catkin_package(
+  INCLUDE_DIRS include
+  CATKIN_DEPENDS ${ROS_DEPENDS}
+)
+
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+)
+
 
 include(CTest)
 include(GenerateExportHeader)
@@ -17,7 +36,7 @@ set(CPPPARSER_INCLUDE_DIRECTORY_PRIVATE
 set(CPPPARSER_SRC_FILES
 	src/models/CANDatabase.cpp
 	src/models/CANFrame.cpp
-  	src/models/CANSignal.cpp
+    src/models/CANSignal.cpp
 	src/parsing/DBCParser.cpp
 	src/parsing/ParsingUtils.cpp
 	src/parsing/Tokenizer.cpp
@@ -29,26 +48,40 @@ if(CPP_CAN_PARSER_USE_STATIC)
 endif()
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS True)
-add_library(cpp-can-parser
+add_library(cpp_can_parser
 	${CPP_CAN_PARSER_COMPILATION_TYPE} 
 	${CPPPARSER_SRC_FILES})
-target_include_directories(cpp-can-parser 
+target_include_directories(cpp_can_parser 
 	PUBLIC ${CPPPARSER_INCLUDE_DIRECTORY}
 		   ${CMAKE_CURRENT_BINARY_DIR}/exports/
 	PRIVATE ${CPPPARSER_INCLUDE_DIRECTORY_PRIVATE})
-generate_export_header(cpp-can-parser
+generate_export_header(cpp_can_parser
 	BASE_NAME cpp_can_parser
 	EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/exports/cpp_can_parser_export.h)
-install(FILES cpp-can-parser
+
+add_dependencies(cpp_can_parser ${catkin_EXPORTED_TARGETS})
+
+target_link_libraries(cpp_can_parser
+  ${catkin_LIBRARIES}
+)
+  
+install(FILES cpp_can_parser
 		${CMAKE_CURRENT_BINARY_DIR}/cpp_can_parser_export.h
 		DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/include)
 
-add_executable(can-parse 
+install(FILES cpp_can_parser
+  ${CATKIN_PACKAGE_BINARY_DIR}/cpp_can_parser_export.h
+  DESTINATION ${CATKIN_PACKAGE_BINARY_DIR}/include)
+      
+install(DIRECTORY include/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+      
+add_executable(can_parse 
 	utils/can-parse/can-parse.cpp
 	utils/can-parse/print-frame.cpp
 	utils/can-parse/print-single-frame.cpp
 	utils/can-parse/check-frame.cpp)
-target_link_libraries(can-parse cpp-can-parser)
+target_link_libraries(can_parse cpp_can_parser   ${catkin_LIBRARIES})
 
 if(BUILD_TESTING)
 	file(COPY tests/dbc-files/
@@ -56,7 +89,7 @@ if(BUILD_TESTING)
 	
 	add_executable(cpc-test-parsing
 		tests/test-parsing.cpp)
-	target_link_libraries(cpc-test-parsing PUBLIC cpp-can-parser)
+	target_link_libraries(cpc-test-parsing PUBLIC cpp_can_parser)
 
 	add_test(NAME cpc-test-parsing
 			COMMAND cpc-test-parsing)
